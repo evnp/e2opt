@@ -1,0 +1,26 @@
+{
+  "name": "e2args",
+  "version": "1.0.0",
+  "description": "Full-featured shell argument handling for the masses.",
+  "scripts": {
+    "lint": "shellcheck ${npm_package_name}",
+    "test": "npm run lint && bats test.bats",
+    "testn": "clear && npm run test | bats-notify",
+    "testw": "npm run test && fswatch -0 -o -r . | xargs -0 -n1 npm run test",
+    "testnw": "npm run testn && fswatch -0 -o -r . | xargs -0 -n1 npm run testn"
+  },
+  "bin": "./${npm_package_name}",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evnp/${npm_package_name}.git"
+  },
+  "homepage": "https://github.com/evnp/${npm_package_name}",
+  "author": "Evan Purcer <evanpurcer@gmail.com> (http://evnp.ca)",
+  "license": "MIT",
+  "devDependencies": {
+    "bats": "1.1.0",
+    "bats-assert": "2.0.0",
+    "bats-support": "git+https://github.com/ztombol/bats-support.git#v0.2.0",
+    "shellcheck": "0.3.0"
+  }
+}
