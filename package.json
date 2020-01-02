@@ -1,13 +1,15 @@
 {
   "name": "e2args",
+  "main": "e2args",
   "version": "1.0.0",
   "description": "Full-featured shell argument handling for the masses.",
   "scripts": {
-    "lint": "shellcheck ${npm_package_name}",
-    "test": "npm run lint && bats test.bats",
-    "testn": "clear && npm run test | bats-notify",
-    "testw": "npm run test && fswatch -0 -o -r . | xargs -0 -n1 npm run test",
-    "testnw": "npm run testn && fswatch -0 -o -r . | xargs -0 -n1 npm run testn"
+    "lint": "shellcheck *.sh",
+    "test": "bats test.sh -t",
+    "testl": "clear && npm run lint && npm run test",
+    "testln": "npm run testl | bats-notify",
+    "testlw": "./watch.sh 'npm run testl' 'bats'",
+    "testlwn": "./watch.sh 'npm run testln' 'bats'"
   },
   "bin": "./${npm_package_name}",
   "repository": {
