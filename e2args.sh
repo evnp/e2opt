@@ -1,43 +1,55 @@
 #!/usr/bin/env bash
 
 # sanity - exit on any error; no unbound variables
-#set -eo pipefail
+set -euo pipefail
 
 E2ARGS_NAMES=()
 E2ARGS_REQUIRED=()
 E2ARGS_VALIDATORS=()
 E2ARGS_SEPARATORS=()
 
-e2args-names() {
-  E2ARGS_NAMES=("$@")
+function e2args-names() {
+	E2ARGS_NAMES=("$@")
 }
 
-e2args-required() {
-  E2ARGS_REQUIRED=("$@")
+function e2args-required() {
+	E2ARGS_REQUIRED=("$@")
 }
 
-e2args-validators() {
-  E2ARGS_VALIDATORS=("$@")
+function e2args-validators() {
+	E2ARGS_VALIDATORS=("$@")
 }
 
-e2args-separators() {
-  E2ARGS_SEPARATORS=("$@")
+function e2args-separators() {
+	E2ARGS_SEPARATORS=("$@")
 }
 
-e2args() {
+function e2args-unset() {
+	unset ARGS
+	unset E2ARGS_NAMES
+	unset E2ARGS_REQUIRED
+	unset E2ARGS_VALIDATORS
+	unset E2ARGS_SEPARATORS
+}
+
+function e2args() {
 	# script arguments:
 	local args=("$@")
 
 	# local array vars defined to provide parameters for argument parsing
 	# ARGS array required; rest optional
 	# ARGS array populated with resulting argument values
-	local argNames=("${E2ARGS_NAMES[@]}")
-	local required=("${E2ARGS_REQUIRED[@]}")
-	local validators=("${E2ARGS_VALIDATORS[@]}")
-	local separators=("${E2ARGS_SEPARATORS[@]}")
-	if (( "${#separators[@]}" == 0 )); then
-		separators=("" "=" ":")
+	local argNames=()
+	if [[ -n "${ARGS:-}" ]]; then
+		argNames=("${ARGS[@]}") # allow passing in names via ARGS
 	fi
+	(( ${#E2ARGS_NAMES[@]} > 0 )) && argNames=("${E2ARGS_NAMES[@]}")
+	local required=()
+	(( ${#E2ARGS_REQUIRED[@]} > 0 )) && required=("${E2ARGS_REQUIRED[@]}")
+	local validators=()
+	(( ${#E2ARGS_VALIDATORS[@]} > 0 )) && validators=("${E2ARGS_VALIDATORS[@]}")
+	local separators=("" "=" ":")
+	(( ${#E2ARGS_SEPARATORS[@]} > 0 )) && separators=("${E2ARGS_SEPARATORS[@]}")
 
 	local argResults=()
 	local argErrors=()
@@ -55,13 +67,14 @@ e2args() {
 	local argValue
 	local argValueSet
 	local argValidator
-	local argReq
 	local argNext
 	local argNextIdx
-	local argReqChecks=()
-	local argReqArgLists=()
-	local argReqOperators=()
-	local argReqStart=()
+	local req
+	local reqCount
+	local reqChecks=()
+	local reqArgs=()
+	local reqOps=()
+	local reqStart=()
 
 	# argChars: first letter of each arg name, concatenated into a string
 	# e.g. ("get" "put" "new")
@@ -206,105 +219,129 @@ e2args() {
 
 	# arg required validation
 	if (( "${#required[@]}" > 0 )); then
-		argReqArgLists=()
-		argReqChecks=()
+		reqArgs=()
+		reqChecks=()
+
+		# validate arg required entries
+		for (( i = 0 ; i < ${#required[@]} ; i++ )); do
+			req="${required[${i}]}"
+			if [[ "${req}" =~ ^(and|or|nand|nor|xand|xnor|xor)[0-9]*$ ]]; then
+				reqCount=0
+				for (( j = 0 ; j < ${#required[@]} ; j++ )); do
+					if [[ "${req}" == "${required[${j}]}" ]]; then
+						(( reqCount++ ))
+					fi
+				done
+				if (( reqCount == 1 )); then
+					echo "Error: only 1 instance of ${req} found in required array. This is ambiguous; use true/false instead."
+					return 1
+				fi
+			elif ! [[ "${req}" == "true" || "${req}" == "false" ]]; then
+				echo "Error: ${req} in required array is invalid."
+				return 1
+			fi
+		done
 
 		# iterate through arg names; check each to see if arg was required
 		for (( i = 0 ; i < ${#argNames[@]} ; i++ )); do
 			argName="${argNames[${i}]}"
 			argChar="${argChars:${i}:1}"
-			argReq="${required[${i}]-}"
+			req="${required[${i}]-}"
 			argValue="${argResults[${i}]-}"
 
-			if [[ "${argReq}" == "true" ]]; then
+			if [[ "${req}" == "true" ]]; then
 				if [[ -z "${argValue}" ]]; then
 					argErrors[${i}]="Error: --${argName} argument is required but was not provided a value"
 				fi
-			elif [[ "${argReq}" =~ ^(and|or|nand|nor|xand|xnor|xor)[0-9]*$ ]]; then
-				local argReqOperator="${argReq//[0-9]/}" # remove digits
-				local argReqIdx="${argReq#${argReqOperator}}" # get digits
+			elif [[ "${req}" =~ ^(and|or|nand|nor|xand|xnor|xor)[0-9]*$ ]]; then
+				local reqOp="${req//[0-9]/}" # remove digits
+				local reqIdx="${req#${reqOp}}" # get digits
 
-				for (( j = 0 ; j < argReqIdx ; j++ )); do
-					if [[ -z "${argReqChecks[${j}]}" ]]; then
-						argReqChecks[${j}]=""
-						argReqArgLists[${j}]=""
-						argReqOperators[${j}]=""
-						argReqStart[${j}]=""
+				for (( j = 0 ; j <= reqIdx ; j++ )); do
+					if [[ -z "${reqChecks[${j}]:-}" ]]; then
+						reqChecks[${j}]=""
+						reqArgs[${j}]=""
+						reqOps[${j}]=""
+						reqStart[${j}]=""
 					fi
 				done
 
-				if [[ -z "${argReqArgLists[${argReqIdx}]}" ]]; then
-					argReqArgLists[${argReqIdx}]=""
-				fi
+				reqOps[${reqIdx}]="${reqOp}"
+				reqArgs[${reqIdx}]+="--${argName} "
 
-				argReqOperators[${argReqIdx}]="${argReqOperator}"
-				argReqArgLists[${argReqIdx}]+="--${argName} "
-
-				if [[ "${argReqOperator}" == "and" ]]; then
+				if [[ "${reqOp}" == "and" ]]; then
 					if [[ -z "${argValue}" ]]; then
-						argReqChecks[${argReqIdx}]=false
+						reqChecks[${reqIdx}]=false
 					fi
-				elif [[ "${argReqOperator}" == "or" ]]; then
-					if [[ -z "${argReqChecks[${argReqIdx}]}" ]]; then
-						argReqChecks[${argReqIdx}]=false
+
+				elif [[ "${reqOp}" == "or" ]]; then
+					if [[ -z "${reqChecks[${reqIdx}]:-}" ]]; then
+						reqChecks[${reqIdx}]=false
 					fi
 					if [[ -n "${argValue}" ]]; then
-						argReqChecks[${argReqIdx}]=true
+						reqChecks[${reqIdx}]=true
 					fi
-				elif [[ "${argReqOperator}" == "nand" ]]; then
-					if [[ -z "${argReqChecks[${argReqIdx}]}" ]]; then
-						argReqChecks[${argReqIdx}]=false
+
+				elif [[ "${reqOp}" == "nand" ]]; then
+					if [[ -z "${reqChecks[${reqIdx}]:-}" ]]; then
+						reqChecks[${reqIdx}]=false
 					fi
 					if [[ -z "${argValue}" ]]; then
-						argReqChecks[${argReqIdx}]=true
+						reqChecks[${reqIdx}]=true
 					fi
-				elif [[ "${argReqOperator}" == "nor" ]]; then
+
+				elif [[ "${reqOp}" == "nor" ]]; then
 					if [[ -n "${argValue}" ]]; then
-						argReqChecks[${argReqIdx}]=false
+						reqChecks[${reqIdx}]=false
 					fi
-				elif [[ "${argReqOperator}" == "xand" || "${argReqOperator}" == "xnor" ]]; then
-					if [[ -z "${argReqStart[${argReqIdx}]}" ]]; then
-						argReqStart[${argReqIdx}]="undefined"
+
+				elif [[ "${reqOp}" == "xand" || "${reqOp}" == "xnor" ]]; then
+					if [[ -z "${reqStart[${reqIdx}]:-}" ]]; then
+						reqChecks[${reqIdx}]=true
+						reqStart[${reqIdx}]="undefined"
 						if [[ -n "${argValue}" ]]; then
-							argReqStart[${argReqIdx}]="defined"
+							reqStart[${reqIdx}]="defined"
 						fi
 					else
-						if [[ "${argReqStart[${argReqIdx}]}" == "undefined" && -n "${argValue}" ]]; then
-							argReqChecks[${argReqIdx}]=false
-						elif [[ "${argReqStart[${argReqIdx}]}" == "defined" && -z "${argValue}" ]]; then
-							argReqChecks[${argReqIdx}]=false
+						if [[ "${reqStart[${reqIdx}]}" == "undefined" && -n "${argValue}" ]]; then
+							reqChecks[${reqIdx}]=false
+						elif [[ "${reqStart[${reqIdx}]}" == "defined" && -z "${argValue}" ]]; then
+							reqChecks[${reqIdx}]=false
 						fi
 					fi
-				elif [[ "${argReqOperator}" == "xor" ]]; then
-					argReqChecks[${argReqIdx}]=false
-					if [[ -z "${argReqStart[${argReqIdx}]}" ]]; then
-						argReqStart[${argReqIdx}]="undefined"
+
+				elif [[ "${reqOp}" == "xor" ]]; then
+					if [[ -z "${reqStart[${reqIdx}]:-}" ]]; then
+						reqChecks[${reqIdx}]=false
+						reqStart[${reqIdx}]="undefined"
 						if [[ -n "${argValue}" ]]; then
-							argReqStart[${argReqIdx}]="defined"
+							reqStart[${reqIdx}]="defined"
 						fi
 					else
-						if [[ "${argReqStart[${argReqIdx}]}" == "undefined" && -n "${argValue}" ]]; then
-							argReqChecks[${argReqIdx}]=true
-						elif [[ "${argReqStart[${argReqIdx}]}" == "defined" && -z "${argValue}" ]]; then
-							argReqChecks[${argReqIdx}]=true
+						if [[ "${reqStart[${reqIdx}]}" == "undefined" && -n "${argValue}" ]]; then
+							reqChecks[${reqIdx}]=true
+						elif [[ "${reqStart[${reqIdx}]}" == "defined" && -z "${argValue}" ]]; then
+							reqChecks[${reqIdx}]=true
 						fi
 					fi
 				fi
 
-			elif [[ "${argReq}" != "false" ]]; then
-				>&2 echo "Error: invalid ARGS_REQUIRED parameter '${argReq}' (must match /(true|false|and|or|nand|nor|xand|xnor|xor)[0-9]*/)"
+			elif [[ "${req}" != "false" ]]; then
+				>&2 echo "Error: invalid ARGS_REQUIRED parameter '${req}' (must match /(true|false|and|or|nand|nor|xand|xnor|xor)[0-9]*/)"
 				return 1
 			fi
 		done
 
-		for (( j = 0 ; j < ${#argReqChecks[@]} ; j++ )); do
-			if [[ "${argReqChecks[${j}]}" == false ]]; then
-				argErrors[${i}]="Error: ${argReqArgLists[${i}]}arguments do not satisfy ${argReqOperators[${i}]} condition"
+		for (( j = 0 ; j < ${#reqChecks[@]} ; j++ )); do
+			if [[ "${reqChecks[${j}]:-}" == false ]]; then
+				argErrors[${i}]="Error: ${reqArgs[${j}]}arguments do not satisfy ${reqOps[${j}]} condition"
 			fi
 		done
 	fi
 
-	argErrors+=("${extraArgErrors[@]}")
+	if (( ${#extraArgErrors[@]} > 0 )); then
+		argErrors+=("${extraArgErrors[@]}")
+	fi
 
 	# if there were errors, output them over stderr and return through ARGS array
 	# otherwise, return arg values/results through ARGS array
@@ -317,6 +354,7 @@ e2args() {
 	done
 
 	# "return" via ARGS env var
+	# shellcheck disable=SC2034
 	ARGS=("${argResults[@]}")
 }
 

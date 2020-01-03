@@ -9,12 +9,12 @@ source "$BATS_TEST_DIRNAME/e2args.sh"
 # N=42 bats test.bats       // run individual test by index
 # R=pattern bats test.bats  // run only tests whose descriptions match pattern
 function setup() {
-	if [[ -n "${N}" ]]; then
+	if [[ -n "${N:-}" ]]; then
 		if (( BATS_TEST_NUMBER != N )); then
 			skip
 		fi
 	fi
-	if [[ -n "${R}" ]]; then
+	if [[ -n "${R:-}" ]]; then
 		if ! [[ "${BATS_TEST_DESCRIPTION}" =~ ${R} ]]; then
 			skip
 		fi
@@ -52,6 +52,17 @@ function assert_args() {
   assert_args -a -b -c -d
 }
 
+@test "boolean flag args : set             : -a -b -c -d" {
+  e2args-names aardvark badger crocodile dingo
+  e2args -a -b -c -d ; set -- "${ARGS[@]}"
+  e2args-unset
+  assert [ -z "${ARGS+x}" ] # ensure ARGS was unset
+  assert_equal "$1" -a
+  assert_equal "$2" -b
+  assert_equal "$3" -c
+  assert_equal "$4" -d
+}
+
 @test "key/value args    : basic           : -a1 -b=2 -c:3 -d 4" {
   e2args-names aardvark badger crocodile dingo
   e2args -a1 -b=2 -c:3 -d 4
@@ -64,7 +75,7 @@ function assert_args() {
   assert_args 1 2 3 4
 }
 
-@test "key/value args    : basic string values   : -c:'snap snap' -aslurp -d 'bark bark' -b=" {
+@test "key/value args    : string values   : -c:'snap snap' -aslurp -d 'bark bark' -b=" {
   e2args-names aardvark badger crocodile dingo
   e2args -c:'snap snap' -aslurp -d 'bark bark' -b=
   assert_args 'slurp' '' 'snap snap' 'bark bark'
@@ -80,6 +91,17 @@ function assert_args() {
   e2args-names aardvark badger crocodile dingo
   e2args -c:'' -a= -d "'single'" -b="\"double\""
   assert_args '' "\"double\"" '' "'single'"
+}
+
+@test "key/value args   : set             : -c:'snap snap' -aslurp -d '\"bark bark\"' -b=" {
+  e2args-names aardvark badger crocodile dingo
+  e2args -c:'snap snap' -aslurp -d "\"bark bark\"" -b= ; set -- "${ARGS[@]}"
+  e2args-unset
+  assert [ -z "${ARGS+x}" ] # ensure ARGS was unset
+  assert_equal "$1" "slurp"
+  assert_equal "$2" ""
+  assert_equal "$3" "snap snap"
+  assert_equal "$4" "\"bark bark\""
 }
 
 @test "longform args     : integer values  : --aardvark -c 1 --badger 2 --dingo" {
@@ -104,6 +126,17 @@ function assert_args() {
   e2args-names aardvark badger crocodile dingo
   e2args --aardvark -c "'single'" --badger:"\"double\"" --dingo=
   assert_args -a "\"double\"" "'single'" ''
+}
+
+@test "longform args    : set             : --aardvark -c 'snap snap' --badger\"growl\"\" -d" {
+  e2args-names aardvark badger crocodile dingo
+  e2args --aardvark -c 'snap snap' --badger"growl\"" -d ; set -- "${ARGS[@]}"
+  e2args-unset
+  assert [ -z "${ARGS+x}" ] # ensure ARGS was unset
+  assert_equal "$1" "-a"
+  assert_equal "$2" "growl\""
+  assert_equal "$3" "snap snap"
+  assert_equal "$4" "-d"
 }
 
 @test "mixture of args  : integer values  : -a 1 -bc -d 2" {
@@ -149,7 +182,7 @@ function assert_valid() {
 @test "required + types" {
   e2args-names aardvark badger crocodile dingo
   e2args-validators int string bool '^(bark|woof)$'
-  e2args-required or false or2 or2
+  e2args-required true false or2 or2
 
   assert_valid -a5 -bgrowl --crocodile --dingo bark
   assert_error -aslurp -bgrowl --crocodile --dingo bark
@@ -521,7 +554,7 @@ function assert_valid() {
   assert_error -abd
   assert_error -acd
   assert_error -bcd
-  assert_valid -error
+  assert_error -abcd
 }
 
 @test "required args    : xand operator   : xand false xand true" {
