@@ -1,6 +1,5 @@
 {
-  "name": "e2args",
-  "main": "e2args",
+  "name": "e2opt",
   "version": "1.0.0",
   "description": "Full-featured shell argument handling for the masses.",
   "scripts": {
