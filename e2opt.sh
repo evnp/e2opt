@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# sanity - exit on any error; no unbound variables
-set -euo pipefail
-
 E2OPT_NAMES=()
 E2OPT_REQUIRED=()
 E2OPT_VALIDATORS=()
@@ -37,15 +34,21 @@ function e2opt() {
 	local arguments=("$@")
 	local optNames=()
 	if [[ -n "${OPTIONS:-}" ]]; then
-		optNames=("${OPTIONS[@]}") # allow passing in names via OPTIONS
+		optNames=("${OPTIONS[@]-}") # allow passing in names via OPTIONS
 	fi
-	(( ${#E2OPT_NAMES[@]} > 0 )) && optNames=("${E2OPT_NAMES[@]}")
+	(( ${#E2OPT_NAMES[@]-} > 0 )) && optNames=("${E2OPT_NAMES[@]}")
 	local required=()
-	(( ${#E2OPT_REQUIRED[@]} > 0 )) && required=("${E2OPT_REQUIRED[@]}")
+	if [[ -n "${E2OPT_VALIDATORS:-}" ]]; then
+		(( ${#E2OPT_REQUIRED[@]-} > 0 )) && required=("${E2OPT_REQUIRED[@]}")
+	fi
 	local validators=()
-	(( ${#E2OPT_VALIDATORS[@]} > 0 )) && validators=("${E2OPT_VALIDATORS[@]}")
+	if [[ -n "${E2OPT_VALIDATORS:-}" ]]; then
+		(( ${#E2OPT_VALIDATORS[@]-} > 0 )) && validators=("${E2OPT_VALIDATORS[@]}")
+	fi
 	local separators=("" "=" ":")
-	(( ${#E2OPT_SEPARATORS[@]} > 0 )) && separators=("${E2OPT_SEPARATORS[@]}")
+	if [[ -n "${E2OPT_SEPARATORS:-}" ]]; then
+		(( ${#E2OPT_SEPARATORS[@]-} > 0 )) && separators=("${E2OPT_SEPARATORS[@]}")
+	fi
 
 	local optResults=()
 	local optErrors=()
@@ -180,22 +183,22 @@ function e2opt() {
 					case "${optValidator}" in
 						"str" | "string")
 							if [[ "${optValue}" =~ ^-${optChar}$ ]]; then
-								optErrors[${i}]="Error: ${arg} is invalid (must be a string value, but was passed as a boolean flag)."
+								optErrors[${i}]="Error: '${arg}' is invalid ('${optValue}' must be a string value)."
 							fi
 							;;
 						"int" | "integer")
 							if ! [[ "${optValue}" =~ ^[0-9]+$ ]]; then
-								optErrors[${i}]="Error: ${arg} is invalid (must be an integer, but was provided value '${optValue}')."
+								optErrors[${i}]="Error: '${arg}' is invalid ('${optValue}' must be an integer)."
 							fi
 							;;
 						"bool" | "boolean")
 							if ! [[ "${optValue}" =~ ^-${optChar}$ ]]; then
-								optErrors[${i}]="Error: ${arg} is invalid (must be a boolean flag, but was provided value '${optValue}')."
+								optErrors[${i}]="Error: '${arg}' is invalid ('${optValue}' must be a boolean flag)."
 							fi
 							;;
 						*)
 							if ! [[ "${optValue}" =~ ${optValidator} ]]; then
-								optErrors[${i}]="Error: ${arg} is invalid ('${optValue}' does not match provided validator '${optValidator}')."
+								optErrors[${i}]="Error: '${arg}' is invalid ('${optValue}' must match format '${optValidator}')."
 							fi
 							;;
 					esac
@@ -210,7 +213,7 @@ function e2opt() {
 
 		# if no value was set, option is invalid
 		if [[ "${optValueSet}" == false ]]; then
-			extraOptErrors+=("Error: ${arg} is invalid.")
+			extraOptErrors+=("Error: '${arg}' is invalid.")
 		fi
 	done
 
@@ -230,11 +233,11 @@ function e2opt() {
 					fi
 				done
 				if (( reqCount == 1 )); then
-					echo "Error: only 1 instance of ${req} found in required array. This is ambiguous; use true/false instead."
+					>&2 echo "Error: only 1 instance of '${req}' found in required array. This is ambiguous; use true/false instead."
 					return 1
 				fi
 			elif ! [[ "${req}" == "true" || "${req}" == "false" ]]; then
-				echo "Error: ${req} in required array is invalid."
+				>&2 echo "Error: '${req}' in required array is invalid."
 				return 1
 			fi
 		done
@@ -331,7 +334,7 @@ function e2opt() {
 
 		for (( j = 0 ; j < ${#reqChecks[@]} ; j++ )); do
 			if [[ "${reqChecks[${j}]:-}" == false ]]; then
-				optErrors[${i}]="Error: ${reqOpts[${j}]} do not satisfy ${reqOps[${j}]} condition."
+				optErrors[${i}]="Error: '${reqOpts[${j}]}' do not satisfy '${reqOps[${j}]}' condition."
 			fi
 		done
 	fi
@@ -345,7 +348,7 @@ function e2opt() {
 	for (( i = 0 ; i < ${#optErrors[@]} ; i++ )); do
 		optError="${optErrors[${i}]}"
 		if [[ -n "${optError}" ]]; then
-			echo "${optError}" >&2
+			>&2 echo "${optError}"
 			optResults[${i}]="${optError}"
 		fi
 	done
@@ -353,9 +356,9 @@ function e2opt() {
 	# "return" via OPTIONS env var
 	# shellcheck disable=SC2034
 	OPTIONS=("${optResults[@]}")
-  # may be used in script to update option env vars $@, $1, $2, etc., e.g.
-  # e2opt "$@" ; set -- "${OPTIONS[@]}"  // process options and pass into $@, $1, $2, etc.
-  # e2opt-unset                          // clean up e2opt env vars if desired
+	# may be used in script to update option env vars $@, $1, $2, etc., e.g.
+	# e2opt "$@" ; set -- "${OPTIONS[@]}"  // process options and pass into $@, $1, $2, etc.
+	# e2opt-unset													 // clean up e2opt env vars if desired
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
