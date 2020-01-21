@@ -11,8 +11,6 @@ e2opt
 
 ...introduction...
 
-![e2opt demo](https://github.com/evnp/e2opt/blob/master/e2opt.gif?raw=true)
-
 Usage
 -----
 ...usage examples...

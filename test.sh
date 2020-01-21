@@ -4,7 +4,7 @@ load './node_modules/bats-support/load'
 load './node_modules/bats-assert/load'
 
 # shellcheck disable=SC1090
-source "$BATS_TEST_DIRNAME/e2opt.sh"
+source "$BATS_TEST_DIRNAME/bin/e2opt.sh"
 
 # N=42 bats test.bats       // run individual test by index
 # R=pattern bats test.bats  // run only tests whose descriptions match pattern
@@ -104,7 +104,7 @@ function assert_args() {
   assert_equal "$4" "\"bark bark\""
 }
 
-@test "longform args     : integer values  : --aardvark -c 1 --badger 2 --dingo" {
+@test "longform args    : integer values  : --aardvark -c 1 --badger 2 --dingo" {
   e2opt-names aardvark badger crocodile dingo
   e2opt --aardvark -c 1 --badger 2 --dingo
   assert_args -a 2 1 -d
@@ -152,13 +152,11 @@ function assert_args() {
 }
 
 function assert_error() {
-  output=""
   run e2opt "$@"
   assert_output -p "Error"
 }
 
 function assert_valid() {
-  output=""
   run e2opt "$@"
   refute_output -p "Error"
 }

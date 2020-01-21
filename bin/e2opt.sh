@@ -38,7 +38,7 @@ function e2opt() {
 	fi
 	(( ${#E2OPT_NAMES[@]-} > 0 )) && optNames=("${E2OPT_NAMES[@]}")
 	local required=()
-	if [[ -n "${E2OPT_VALIDATORS:-}" ]]; then
+	if [[ -n "${E2OPT_REQUIRED:-}" ]]; then
 		(( ${#E2OPT_REQUIRED[@]-} > 0 )) && required=("${E2OPT_REQUIRED[@]}")
 	fi
 	local validators=()
@@ -361,6 +361,7 @@ function e2opt() {
 	# e2opt-unset													 // clean up e2opt env vars if desired
 }
 
+# allow sourcing script or executing it directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 	e2opt "$@"
 fi
