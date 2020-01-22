@@ -1,6 +1,6 @@
 {
   "name": "e2opt",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Full-featured shell argument handling for the masses.",
   "scripts": {
     "lint": "shellcheck *.sh",
@@ -10,12 +10,14 @@
     "testlw": "./watch.sh 'npm run testl' 'bats'",
     "testlwn": "./watch.sh 'npm run testln' 'bats'"
   },
-  "bin": "./${npm_package_name}",
+  "bin": {
+    "e2opt": "./bin/e2opt.sh"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/evnp/${npm_package_name}.git"
+    "url": "https://github.com/evnp/e2opt.git"
   },
-  "homepage": "https://github.com/evnp/${npm_package_name}",
+  "homepage": "https://github.com/evnp/e2opt",
   "author": "Evan Purcer <evanpurcer@gmail.com> (http://evnp.ca)",
   "license": "MIT",
   "devDependencies": {
