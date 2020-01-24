@@ -1,6 +1,6 @@
 {
   "name": "e2opt",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Full-featured shell argument handling for the masses.",
   "scripts": {
     "lint": "shellcheck *.sh",

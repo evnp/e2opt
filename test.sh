@@ -21,6 +21,16 @@ function setup() {
 	fi
 }
 
+@test "no input" {
+  run e2opt
+  assert_output -p "Error:"
+}
+
+@test "help" {
+  run e2opt --help
+  assert_output -p "Usage:"
+}
+
 function assert_args() {
   local expected=( "$@" )
 
@@ -35,27 +45,27 @@ function assert_args() {
 }
 
 @test "boolean flag args : basic           : -a -b -c -d" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -a -b -c -d
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -a -b -c -d
   assert_args -a -b -c -d
 }
 
 @test "boolean flag args : arbitrary order : -c -a -d -b" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -c -a -d -b
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -c -a -d -b
   assert_args -a -b -c -d
 }
 
 @test "boolean flag args : shorthand       : -acd -b" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -acd -b
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -acd -b
   assert_args -a -b -c -d
 }
 
 @test "boolean flag args : set             : -a -b -c -d" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -a -b -c -d ; set -- "${OPTIONS[@]}"
-  e2opt-unset
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -a -b -c -d ; set -- "${OPTIONS[@]}"
+  e2opt --unset
   assert [ -z "${OPTIONS+x}" ] # ensure OPTIONS was unset
   assert_equal "$1" -a
   assert_equal "$2" -b
@@ -64,39 +74,39 @@ function assert_args() {
 }
 
 @test "key/value args    : basic           : -a1 -b=2 -c:3 -d 4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -a1 -b=2 -c:3 -d 4
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -a1 -b=2 -c:3 -d 4
   assert_args 1 2 3 4
 }
 
 @test "key/value args    : arbitrary order : -c:3 -a1 -d 4 -b=2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -c:3 -a1 -d 4 -b=2
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -c:3 -a1 -d 4 -b=2
   assert_args 1 2 3 4
 }
 
 @test "key/value args    : string values   : -c:'snap snap' -aslurp -d 'bark bark' -b=" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -c:'snap snap' -aslurp -d 'bark bark' -b=
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -c:'snap snap' -aslurp -d 'bark bark' -b=
   assert_args 'slurp' '' 'snap snap' 'bark bark'
 }
 
-@test "key/value args    : empty values    : -c:'' -a= -d \"\" -b=\"\"" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -c:'' -a= -d "" -b=""
+@test "key/value args   : empty values    : -c:'' -a= -d \"\" -b=\"\"" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -c:'' -a= -d "" -b=""
   assert_args '' '' '' ''
 }
 
-@test "key/value args    : quotes" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -c:'' -a= -d "'single'" -b="\"double\""
+@test "key/value args   : quotes" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -c:'' -a= -d "'single'" -b="\"double\""
   assert_args '' "\"double\"" '' "'single'"
 }
 
 @test "key/value args   : set             : -c:'snap snap' -aslurp -d '\"bark bark\"' -b=" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -c:'snap snap' -aslurp -d "\"bark bark\"" -b= ; set -- "${OPTIONS[@]}"
-  e2opt-unset
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -c:'snap snap' -aslurp -d "\"bark bark\"" -b= ; set -- "${OPTIONS[@]}"
+  e2opt --unset
   assert [ -z "${OPTIONS+x}" ] # ensure OPTIONS was unset
   assert_equal "$1" "slurp"
   assert_equal "$2" ""
@@ -105,33 +115,33 @@ function assert_args() {
 }
 
 @test "longform args    : integer values  : --aardvark -c 1 --badger 2 --dingo" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt --aardvark -c 1 --badger 2 --dingo
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set --aardvark -c 1 --badger 2 --dingo
   assert_args -a 2 1 -d
 }
 
 @test "longform args    : string values   : --aardvark -c 'snap snap' --badgergrowl -d" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt --aardvark -c 'snap snap' --badgergrowl -d
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set --aardvark -c 'snap snap' --badgergrowl -d
   assert_args -a growl 'snap snap' -d
 }
 
 @test "longform args    : empty values    : --aardvark -c '' --badger:\"\" --dingo=''" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt --aardvark -c '' --badger:"" --dingo=
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set --aardvark -c '' --badger:"" --dingo=
   assert_args -a '' '' ''
 }
 
 @test "longform args    : quotes" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt --aardvark -c "'single'" --badger:"\"double\"" --dingo=
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set --aardvark -c "'single'" --badger:"\"double\"" --dingo=
   assert_args -a "\"double\"" "'single'" ''
 }
 
 @test "longform args    : set             : --aardvark -c 'snap snap' --badger\"growl\"\" -d" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt --aardvark -c 'snap snap' --badger"growl\"" -d ; set -- "${OPTIONS[@]}"
-  e2opt-unset
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set --aardvark -c 'snap snap' --badger"growl\"" -d ; set -- "${OPTIONS[@]}"
+  e2opt --unset
   assert [ -z "${OPTIONS+x}" ] # ensure OPTIONS was unset
   assert_equal "$1" "-a"
   assert_equal "$2" "growl\""
@@ -140,30 +150,30 @@ function assert_args() {
 }
 
 @test "mixture of args  : integer values  : -a 1 -bc -d 2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -a 1 -bc -d 2
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -a 1 -bc -d 2
   assert_args 1 -b -c 2
 }
 
 @test "mixture of args  : string values   : -a:slurp -bc -d'bark bark'" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt -a:slurp -bc -d'bark bark'
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --set -a:slurp -bc -d'bark bark'
   assert_args 'slurp' -b -c 'bark bark'
 }
 
 function assert_error() {
-  run e2opt "$@"
+  run e2opt --set "$@"
   assert_output -p "Error"
 }
 
 function assert_valid() {
-  run e2opt "$@"
+  run e2opt --set "$@"
   refute_output -p "Error"
 }
 
 @test "arg types        : int string bool '^(bark|woof)$'" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-validators int string bool '^(bark|woof)$'
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --types int string bool '^(bark|woof)$'
 
   assert_valid -a5 -bgrowl --crocodile --dingo bark
   assert_error -aslurp -bgrowl --crocodile --dingo bark
@@ -177,10 +187,10 @@ function assert_valid() {
   assert_valid -a5 -b5 -c --dingo woof
 }
 
-@test "required + types" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-validators int string bool '^(bark|woof)$'
-  e2opt-required true false or2 or2
+@test "rules + types" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --types int string bool '^(bark|woof)$'
+  e2opt --rules true false or2 or2
 
   assert_valid -a5 -bgrowl --crocodile --dingo bark
   assert_error -aslurp -bgrowl --crocodile --dingo bark
@@ -194,9 +204,9 @@ function assert_valid() {
   assert_valid -a5 -b5 -c --dingo woof
 }
 
-@test "required args    : booleans        : true false true false" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required true false true false
+@test "rules args       : booleans        : true false true false" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules true false true false
 
   assert_error -a
   assert_error -ab
@@ -219,9 +229,9 @@ function assert_valid() {
   assert_valid -c "snap snap" --aardvark slurp -bgrowl
 }
 
-@test "required args    : and operator    : and false and true" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required and false and true
+@test "rules args       : and operator    : and false and true" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules and false and true
 
   assert_error -a
   assert_error -b
@@ -240,9 +250,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : and operator    : and false and2 and2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required and false and2 and2
+@test "rules args       : and operator    : and false and2 and2" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules and false and2 and2
 
   assert_error -a
   assert_error -b
@@ -261,9 +271,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : and operator    : and3 and4 and3 and4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required and3 and4 and3 and4
+@test "rules args       : and operator    : and3 and4 and3 and4" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules and3 and4 and3 and4
 
   assert_error -a
   assert_error -b
@@ -282,9 +292,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : and operator    : and11 and11 and11 and11" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required and11 and11 and11 and11
+@test "rules args       : and operator    : and11 and11 and11 and11" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules and11 and11 and11 and11
 
   assert_error -a
   assert_error -b
@@ -303,9 +313,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : or operator     : or false or true" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required or false or true
+@test "rules args       : or operator     : or false or true" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules or false or true
 
   assert_error -a
   assert_error -b
@@ -324,9 +334,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : or operator     : or false or2 or2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required or false or2 or2
+@test "rules args       : or operator     : or false or2 or2" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules or false or2 or2
 
   assert_error -a
   assert_error -b
@@ -345,9 +355,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : or operator     : or3 or4 or3 or4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required or3 or4 or3 or4
+@test "rules args       : or operator     : or3 or4 or3 or4" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules or3 or4 or3 or4
 
   assert_error -a
   assert_error -b
@@ -366,9 +376,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : or operator     : or11 or11 or11 or11" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required or11 or11 or11 or11
+@test "rules args       : or operator     : or11 or11 or11 or11" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules or11 or11 or11 or11
 
   assert_valid -a
   assert_valid -b
@@ -387,9 +397,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : nand operator   : nand false nand true" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nand false nand true
+@test "rules args       : nand operator   : nand false nand true" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nand false nand true
 
   assert_error -a
   assert_error -b
@@ -408,9 +418,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : nand operator   : nand false nand2 nand2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nand false nand2 nand2
+@test "rules args       : nand operator   : nand false nand2 nand2" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nand false nand2 nand2
 
   assert_error -a
   assert_error -b
@@ -429,9 +439,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : nand operator   : nand3 nand4 nand3 nand4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nand3 nand4 nand3 nand4
+@test "rules args       : nand operator   : nand3 nand4 nand3 nand4" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nand3 nand4 nand3 nand4
 
   assert_valid -a
   assert_valid -b
@@ -450,9 +460,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : nand operator   : nand11 nand11 nand11 nand11" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nand11 nand11 nand11 nand11
+@test "rules args       : nand operator   : nand11 nand11 nand11 nand11" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nand11 nand11 nand11 nand11
 
   assert_valid -a
   assert_valid -b
@@ -471,9 +481,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : nor operator    : nor false nor true" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nor false nor true
+@test "rules args       : nor operator    : nor false nor true" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nor false nor true
 
   assert_error -a
   assert_error -b
@@ -492,9 +502,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : nor operator    : nor false nor2 nor2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nor false nor2 nor2
+@test "rules args       : nor operator    : nor false nor2 nor2" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nor false nor2 nor2
 
   assert_error -a
   assert_error -b
@@ -513,9 +523,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : nor operator    : nor3 nor4 nor3 nor4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nor3 nor4 nor3 nor4
+@test "rules args       : nor operator    : nor3 nor4 nor3 nor4" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nor3 nor4 nor3 nor4
 
   assert_error -a
   assert_error -b
@@ -534,9 +544,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : nor operator    : nor11 nor11 nor11 nor11" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required nor11 nor11 nor11 nor11
+@test "rules args       : nor operator    : nor11 nor11 nor11 nor11" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules nor11 nor11 nor11 nor11
 
   assert_error -a
   assert_error -b
@@ -555,93 +565,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : xand operator   : xand false xand true" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xand false xand true
-
-  assert_error -a
-  assert_error -b
-  assert_error -c
-  assert_valid -d
-  assert_error -ab
-  assert_error -ac
-  assert_error -ad
-  assert_error -bc
-  assert_valid -bd
-  assert_error -cd
-  assert_error -abc
-  assert_error -abd
-  assert_valid -acd
-  assert_error -bcd
-  assert_valid -abcd
-}
-
-@test "required args    : xand operator   : xand false xand2 xand2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xand false xand2 xand2
-
-  assert_error -a
-  assert_error -b
-  assert_error -c
-  assert_error -d
-  assert_error -ab
-  assert_error -ac
-  assert_error -ad
-  assert_error -bc
-  assert_error -bd
-  assert_error -cd
-  assert_error -abc
-  assert_error -abd
-  assert_error -acd
-  assert_error -bcd
-  assert_error -abcd
-}
-
-@test "required args    : xand operator   : xand3 xand4 xand3 xand4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xand3 xand4 xand3 xand4
-
-  assert_error -a
-  assert_error -b
-  assert_error -c
-  assert_error -d
-  assert_error -ab
-  assert_valid -ac
-  assert_error -ad
-  assert_error -bc
-  assert_valid -bd
-  assert_error -cd
-  assert_error -abc
-  assert_error -abd
-  assert_error -acd
-  assert_error -bcd
-  assert_valid -abcd
-}
-
-@test "required args    : xand operator   : xand11 xand11 xand11 xand11" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xand11 xand11 xand11 xand11
-
-  assert_error -a
-  assert_error -b
-  assert_error -c
-  assert_error -d
-  assert_error -ab
-  assert_error -ac
-  assert_error -ad
-  assert_error -bc
-  assert_error -bd
-  assert_error -cd
-  assert_error -abc
-  assert_error -abd
-  assert_error -acd
-  assert_error -bcd
-  assert_valid -abcd
-}
-
-@test "required args    : xnor operator   : xnor false xnor true" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xnor false xnor true
+@test "rules args       : xand operator   : xand false xand true" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xand false xand true
 
   assert_error -a
   assert_error -b
@@ -660,9 +586,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : xnor operator   : xnor false xnor2 xnor2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xnor false xnor2 xnor2
+@test "rules args       : xand operator   : xand false xand2 xand2" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xand false xand2 xand2
 
   assert_error -a
   assert_error -b
@@ -681,9 +607,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : xnor operator   : xnor3 xnor4 xnor3 xnor4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xnor3 xnor4 xnor3 xnor4
+@test "rules args       : xand operator   : xand3 xand4 xand3 xand4" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xand3 xand4 xand3 xand4
 
   assert_error -a
   assert_error -b
@@ -702,9 +628,9 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : xnor operator   : xnor11 xnor11 xnor11 xnor11" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xnor11 xnor11 xnor11 xnor11
+@test "rules args       : xand operator   : xand11 xand11 xand11 xand11" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xand11 xand11 xand11 xand11
 
   assert_error -a
   assert_error -b
@@ -723,9 +649,93 @@ function assert_valid() {
   assert_valid -abcd
 }
 
-@test "required args    : xor operator    : xor false xor true" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xor false xor true
+@test "rules args       : xnor operator   : xnor false xnor true" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xnor false xnor true
+
+  assert_error -a
+  assert_error -b
+  assert_error -c
+  assert_valid -d
+  assert_error -ab
+  assert_error -ac
+  assert_error -ad
+  assert_error -bc
+  assert_valid -bd
+  assert_error -cd
+  assert_error -abc
+  assert_error -abd
+  assert_valid -acd
+  assert_error -bcd
+  assert_valid -abcd
+}
+
+@test "rules args       : xnor operator   : xnor false xnor2 xnor2" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xnor false xnor2 xnor2
+
+  assert_error -a
+  assert_error -b
+  assert_error -c
+  assert_error -d
+  assert_error -ab
+  assert_error -ac
+  assert_error -ad
+  assert_error -bc
+  assert_error -bd
+  assert_error -cd
+  assert_error -abc
+  assert_error -abd
+  assert_error -acd
+  assert_error -bcd
+  assert_error -abcd
+}
+
+@test "rules args       : xnor operator   : xnor3 xnor4 xnor3 xnor4" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xnor3 xnor4 xnor3 xnor4
+
+  assert_error -a
+  assert_error -b
+  assert_error -c
+  assert_error -d
+  assert_error -ab
+  assert_valid -ac
+  assert_error -ad
+  assert_error -bc
+  assert_valid -bd
+  assert_error -cd
+  assert_error -abc
+  assert_error -abd
+  assert_error -acd
+  assert_error -bcd
+  assert_valid -abcd
+}
+
+@test "rules args       : xnor operator   : xnor11 xnor11 xnor11 xnor11" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xnor11 xnor11 xnor11 xnor11
+
+  assert_error -a
+  assert_error -b
+  assert_error -c
+  assert_error -d
+  assert_error -ab
+  assert_error -ac
+  assert_error -ad
+  assert_error -bc
+  assert_error -bd
+  assert_error -cd
+  assert_error -abc
+  assert_error -abd
+  assert_error -acd
+  assert_error -bcd
+  assert_valid -abcd
+}
+
+@test "rules args       : xor operator    : xor false xor true" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xor false xor true
 
   assert_error -a
   assert_error -b
@@ -744,9 +754,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : xor operator    : xor false xor2 xor2" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xor false xor2 xor2
+@test "rules args       : xor operator    : xor false xor2 xor2" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xor false xor2 xor2
 
   assert_error -a
   assert_error -b
@@ -765,9 +775,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : xor operator    : xor3 xor4 xor3 xor4" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xor3 xor4 xor3 xor4
+@test "rules args       : xor operator    : xor3 xor4 xor3 xor4" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xor3 xor4 xor3 xor4
 
   assert_error -a
   assert_error -b
@@ -786,9 +796,9 @@ function assert_valid() {
   assert_error -abcd
 }
 
-@test "required args    : xor operator    : xor11 xor11 xor11 xor11" {
-  e2opt-names aardvark badger crocodile dingo
-  e2opt-required xor11 xor11 xor11 xor11
+@test "rules args       : xor operator    : xor11 xor11 xor11 xor11" {
+  e2opt --names aardvark badger crocodile dingo
+  e2opt --rules xor11 xor11 xor11 xor11
 
   assert_valid -a
   assert_valid -b
